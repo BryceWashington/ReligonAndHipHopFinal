@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { TimelineData } from '../types';
 
 interface ModalProps {
@@ -35,10 +35,10 @@ const getYoutubeUrl = (url: string) => {
 };
 
 const Modal: React.FC<ModalProps> = ({ item, onClose }) => {
-  const [activeEmbedIndex, setActiveEmbedIndex] = React.useState(0);
+  const [activeEmbedIndex, setActiveEmbedIndex] = useState(0);
 
   // Reset index when item changes
-  React.useEffect(() => {
+  useEffect(() => {
     setActiveEmbedIndex(0);
   }, [item?.id]);
 
