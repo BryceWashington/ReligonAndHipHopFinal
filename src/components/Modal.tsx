@@ -81,7 +81,7 @@ const Modal: React.FC<ModalProps> = ({ item, onClose }) => {
             <h2 className="text-3xl md:text-4xl font-serif font-bold text-zinc-900 mb-10 leading-tight">{item.title}</h2>
             
             <div className="prose prose-zinc max-w-none mb-12">
-              <h4 className="text-zinc-400 uppercase tracking-[0.2em] text-[10px] font-black mb-6">Academic Analysis</h4>
+              <h4 className="text-zinc-400 uppercase tracking-[0.2em] text-[10px] font-black mb-6">Annotation</h4>
               <p className="text-zinc-700 text-lg leading-relaxed font-serif border-l-2 border-zinc-200 pl-8">
                 {item.annotation}
               </p>
