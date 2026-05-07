@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { TimelineData } from '../types';
 
 interface ModalProps {
@@ -7,27 +7,54 @@ interface ModalProps {
 }
 
 const getYoutubeUrl = (url: string) => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|live\/)([^#&?]*).*/;
-  const match = url.match(regExp);
-  const id = (match && match[2].length === 11) ? match[2] : null;
-  
-  if (!id) return null;
+  try {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|live\/)([^#&?]*).*/;
+    const match = url.match(regExp);
+    const id = (match && match[2].length === 11) ? match[2] : null;
+    
+    if (!id) return null;
 
-  // Extract timestamp if present (e.g., t=177 or start=177)
-  const urlObj = new URL(url.replace('live/', 'watch?v=')); // normalize for URL parser if needed
-  const t = urlObj.searchParams.get('t') || url.match(/[?&]t=(\d+)/)?.[1];
-  
-  return `https://www.youtube.com/embed/${id}${t ? `?start=${t}` : ''}`;
+    // Extract timestamp
+    let t = '';
+    const urlSearchParams = new URLSearchParams(url.split('?')[1] || '');
+    const timeParam = urlSearchParams.get('t') || urlSearchParams.get('start');
+    
+    if (timeParam) {
+      t = timeParam.replace('s', ''); // Handle 177s format
+    } else {
+      // Fallback for formats like &t=177
+      const tMatch = url.match(/[?&](t|start)=(\d+)/);
+      if (tMatch) t = tMatch[2];
+    }
+    
+    return `https://www.youtube.com/embed/${id}${t ? `?start=${t}` : ''}`;
+  } catch (e) {
+    console.error("Error parsing YouTube URL", e);
+    return null;
+  }
 };
 
 const Modal: React.FC<ModalProps> = ({ item, onClose }) => {
+  const [activeEmbedIndex, setActiveEmbedIndex] = React.useState(0);
+
+  // Reset index when item changes
+  React.useEffect(() => {
+    setActiveEmbedIndex(0);
+  }, [item?.id]);
+
   if (!item) return null;
 
-  const embedUrl = item.mediaLinks.find(l => l.type === 'embed')?.url;
-  const youtubeEmbedUrl = embedUrl ? getYoutubeUrl(embedUrl) : null;
+  const embedLinks = item.mediaLinks.filter(l => l.type === 'embed');
+  const activeEmbed = embedLinks[activeEmbedIndex];
+  const youtubeEmbedUrl = activeEmbed ? getYoutubeUrl(activeEmbed.url) : null;
+
+  // Reset index when item changes (using a key on the component is better but this works)
+  // Actually, we can use a key in the parent, but let's just use effect-like logic
+  // if we were in a class, or just reset it when item opens.
+  // The simplest is to key the Modal content.
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+    <div key={item.id} className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-white/80 backdrop-blur-md"
@@ -45,10 +72,30 @@ const Modal: React.FC<ModalProps> = ({ item, onClose }) => {
 
         <div className="flex flex-col lg:flex-row">
           {/* Media Section */}
-          <div className="lg:w-3/5 bg-zinc-50 border-r border-zinc-100">
-            <div className="sticky top-0 aspect-video lg:aspect-square flex items-center justify-center">
+          <div className="lg:w-[45%] bg-zinc-50 border-r border-zinc-100 flex flex-col items-center justify-center min-h-[400px]">
+            {/* Multi-embed Switcher */}
+            {embedLinks.length > 1 && (
+              <div className="flex gap-2 mb-4 px-4 overflow-x-auto max-w-full no-scrollbar">
+                {embedLinks.map((link, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveEmbedIndex(idx)}
+                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      activeEmbedIndex === idx 
+                        ? 'bg-zinc-900 text-white shadow-md' 
+                        : 'bg-zinc-200 text-zinc-500 hover:bg-zinc-300'
+                    }`}
+                  >
+                    {link.title}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="w-full aspect-video flex items-center justify-center relative">
               {youtubeEmbedUrl ? (
                 <iframe
+                  key={youtubeEmbedUrl}
                   className="w-full h-full"
                   src={youtubeEmbedUrl}
                   title={item.title}
@@ -67,7 +114,7 @@ const Modal: React.FC<ModalProps> = ({ item, onClose }) => {
           </div>
 
           {/* Text Content */}
-          <div className="lg:w-2/5 p-8 md:p-12 flex flex-col justify-center">
+          <div className="lg:w-[55%] p-8 md:p-12 flex flex-col justify-center">
             <div className="flex flex-wrap items-center gap-4 mb-8">
               <span className="bg-zinc-900 text-zinc-50 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest">
                 Era {item.era}
